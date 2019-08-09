@@ -30,18 +30,30 @@ class Scratch3ChanceBlocks {
         this.runtime.sidesInternal = ["1", "2", "3", "4", "5", "6"];
         this.runtime.dice = [];
         this.runtime.sliderString = '16.666666,16.666666,16.666666,16.666666,16.666666,16.666666|1~2~3~4~5~6';
+        this.runtime.costumeSliderDefault = '';
+
         //initializing
         this.addDiceObject('dice1');
         this.addDiceObject('dice2');
+        
     }
 
     /**
      * @return {object} This object's metadata.
      */
     getInfo() {
-
-        //this.sidesInternal = ["1", "2", "3", "4", "5", "6"];
+    
         this.blocks = [];
+        let costumeList = [];
+        let probabilities = [];
+        let costumes = this.runtime.targets[this.runtime.targets.length - 1].getCostumes();
+        for (let i = 0; i < costumes.length; i++) {
+            costumeList.push(costumes[i].name);
+            probabilities.push(100.0 / costumes.length);
+        }
+        
+        this.runtime.costumeSliderDefault = probabilities.toString() + '|' + costumeList.join('~');
+        
         // Setting chances of all sides proportionately 
         this.setValue = function(currentDist, side, chance) {
             if (chance >= 100) {
@@ -119,13 +131,16 @@ class Scratch3ChanceBlocks {
 
                 diceOptions: {
                     items: ['create', 'rename', 'delete']
+                },
+
+                showMenu: {
+                    items: ['show', 'hide']
                 }
             }
         };
     }
 
     addBlocks() {
-
         this.blocks.push(
 
             {
@@ -329,7 +344,20 @@ class Scratch3ChanceBlocks {
                 arguments: {
                     DISTRIBUTION: {
                         type: ArgumentType.SLIDER,
-                        defaultValue: '50.0,50.0|costume1~costume2'
+                        defaultValue: this.runtime.costumeSliderDefault
+                    }
+                }
+
+            },
+            {
+                opcode: 'showHideVizMonitor',
+                blockType: BlockType.COMMAND,
+                text: '[SHOW] dice monitor',
+                arguments: {
+                    SHOW: {
+                        type: ArgumentType.STRING,
+                        defaultValue: 'show',
+                        menu: 'showMenu'
                     }
                 }
 
@@ -337,7 +365,15 @@ class Scratch3ChanceBlocks {
             {
                 opcode: 'vizMonitor',
                 blockType: BlockType.REPORTER,
-                text: 'dice1 current sides'
+                text: '[DICE] monitor',
+                arguments: {
+                    DICE: {
+                        type: ArgumentType.STRING,
+                        defaultValue: 'dice1',
+                        menu: 'diceMenu'
+                    }
+                    
+                }
             }
 
             /* number of sides in a dice (may be not needed)
@@ -583,10 +619,32 @@ class Scratch3ChanceBlocks {
         this.runtime.sidesInternal = this.runtime.dice[i].strings;
     }
 
-    vizMonitor() {
-        const sliders = JSON.parse('[' + this.runtime.dice[0].distribution + ']');
+    showHideVizMonitor(args) {
+        if (args.SHOW === 'hide') {
+            this.runtime.monitorBlocks.changeBlock({
+                id: 'chance_vizMonitor', // Monitor blocks for variables are the variable ID.
+                element: 'checkbox', // Mimic checkbox event from flyout.
+                value: false
+            }, this.runtime);
+
+        } else if (args.SHOW === 'show') {
+            this.runtime.monitorBlocks.changeBlock({
+                id: 'chance_vizMonitor', // Monitor blocks for variables are the variable ID.
+                element: 'checkbox', // Mimic checkbox event from flyout.
+                value: true
+            }, this.runtime);
+            
+        }
+    }
+
+    vizMonitor(args) {
+        
+
+        const i = this.getDiceIndex(args.DICE);
+        const sliders = JSON.parse('[' + this.runtime.dice[i].distribution + ']');
         const blockList = ['▁', '▂', '▃', '▅', '▆', '▇'];
         const result = [];
+        
         for (let i = 0; i < sliders.length; i++){
             let sliderValue = sliders[i];
             sliderValue = Math.round(sliderValue / 100.0 * (blockList.length - 1));
@@ -618,6 +676,7 @@ class Scratch3ChanceBlocks {
 
     }
 
+
     _setCostume (target, requestedCostume, optZeroIndex) {
         if (typeof requestedCostume === 'number') {
             // Numbers should be treated as costume indices, always
@@ -643,6 +702,8 @@ class Scratch3ChanceBlocks {
         // Per 2.0, 'switch costume' can't start threads even in the Stage.
         return [];
     }
+
+    
 }
 
 module.exports = Scratch3ChanceBlocks;
