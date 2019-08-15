@@ -26,15 +26,34 @@ class Scratch3ChanceBlocks {
          * @type {Runtime}
          */
 
+
+
         this.runtime = runtime;
         this.runtime.sidesInternal = ["1", "2", "3", "4", "5", "6"];
         this.runtime.dice = [];
         this.runtime.sliderString = '16.666666,16.666666,16.666666,16.666666,16.666666,16.666666|1~2~3~4~5~6';
         this.runtime.costumeSliderDefault = '';
+        this.runtime.modalDice = null;
 
         //initializing
         this.addDiceObject('dice1');
         this.addDiceObject('dice2');
+
+        this.runtime.on('NAME_DICE', diceName => {
+
+            if (this.getDiceIndex(diceName) === -1) {
+                this.addDiceObject(diceName);
+            } else {
+                alert("Dice named \"" + diceName + "\" already exists.");
+            }
+            this.runtime.modalDice = diceName;
+
+        });
+
+        this.runtime.on('SET_DISTRIBUTION', distribution => {
+            const i = this.getDiceIndex(this.runtime.modalDice);
+            this.runtime.dice[i].distribution = distribution;
+        });
         
     }
 
@@ -142,6 +161,13 @@ class Scratch3ChanceBlocks {
 
     addBlocks() {
         this.blocks.push(
+            {
+                opcode: 'makeDiceButton',
+                blockType: BlockType.BUTTON,
+                text: 'Make a Dice',
+                func: 'MAKE_A_DICE'
+
+            },
 
             {
                 opcode: 'diceVal',
@@ -350,16 +376,15 @@ class Scratch3ChanceBlocks {
 
             },
             {
-                opcode: 'showHideVizMonitor',
+                opcode: 'showVizMonitor',
                 blockType: BlockType.COMMAND,
-                text: '[SHOW] dice monitor',
-                arguments: {
-                    SHOW: {
-                        type: ArgumentType.STRING,
-                        defaultValue: 'show',
-                        menu: 'showMenu'
-                    }
-                }
+                text: 'show dice monitor'
+
+            },
+            {
+                opcode: 'hideVizMonitor',
+                blockType: BlockType.COMMAND,
+                text: 'hide dice monitor'
 
             },
             {
@@ -619,31 +644,36 @@ class Scratch3ChanceBlocks {
         this.runtime.sidesInternal = this.runtime.dice[i].strings;
     }
 
-    showHideVizMonitor(args) {
-        if (args.SHOW === 'hide') {
-            this.runtime.monitorBlocks.changeBlock({
-                id: 'chance_vizMonitor', // Monitor blocks for variables are the variable ID.
-                element: 'checkbox', // Mimic checkbox event from flyout.
-                value: false
-            }, this.runtime);
+    showVizMonitor() {
 
-        } else if (args.SHOW === 'show') {
-            this.runtime.monitorBlocks.changeBlock({
-                id: 'chance_vizMonitor', // Monitor blocks for variables are the variable ID.
-                element: 'checkbox', // Mimic checkbox event from flyout.
-                value: true
-            }, this.runtime);
-            
-        }
+        this.runtime.monitorBlocks.changeBlock({
+            id: 'chance_viz_monitor', // Monitor blocks for variables are the variable ID.
+            element: 'checkbox', // Mimic checkbox event from flyout.
+            value: true
+        }, this.runtime);
+
     }
 
-    vizMonitor(args) {
+
+    hideVizMonitor() {
+
+        this.runtime.monitorBlocks.changeBlock({
+            id: 'chance_viz_monitor', // Monitor blocks for variables are the variable ID.
+            element: 'checkbox', // Mimic checkbox event from flyout.
+            value: false
+        }, this.runtime);
+
+
+    }
+
+    /*vizMonitor(args) {
         
 
         const i = this.getDiceIndex(args.DICE);
         const sliders = JSON.parse('[' + this.runtime.dice[i].distribution + ']');
         const blockList = ['▁', '▂', '▃', '▅', '▆', '▇'];
         const result = [];
+
         
         for (let i = 0; i < sliders.length; i++){
             let sliderValue = sliders[i];
@@ -652,6 +682,24 @@ class Scratch3ChanceBlocks {
         }
         return result.join(' ');
 
+    }*/
+
+    vizMonitor(args, util) {
+        const index = this.getDiceIndex(args.DICE);
+        const sliders = JSON.parse('[' + this.runtime.dice[index].distribution + ']');
+        const block = '▇';
+        const list = util.target.lookupOrCreateList('chance_viz_monitor');
+        console.log(util.target.lookupOrCreateList);
+        list.value = [];
+        for (let i = 0; i < sliders.length; i++) {
+            const numBlocks = Math.round(sliders[i] / 10);
+            let listValue = '';
+            for (let j = 0; j < numBlocks; j++) {
+                listValue = listValue + block;
+            }
+            list.value.push(listValue);
+        }
+        
     }
 
     setCostumeTo(args, util) {
