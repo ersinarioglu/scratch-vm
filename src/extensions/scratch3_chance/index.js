@@ -53,6 +53,11 @@ class Scratch3ChanceBlocks {
         this.runtime.on('SET_DISTRIBUTION', distribution => {
             const i = this.getDiceIndex(this.runtime.modalDice);
             this.runtime.dice[i].distribution = distribution;
+            const strings = [];
+            for (let i = 1; i <= distribution.length; i++) {
+                strings.push(i + '');
+            }
+            this.runtime.dice[i].strings = strings;
         });
         
     }
